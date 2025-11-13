@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-
 const RepeatingImageTransition = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const gridRef = useRef(null);
@@ -35,7 +34,7 @@ const RepeatingImageTransition = () => {
         ...item,
         image: `/assets/img${(i % TOTAL_IMAGES) + 1}.webp`,
         steps: 5 + (i % 4),
-        clipPathDirection: i % 2 === 0 ? "top-bottom" : "bottom-top",
+        clipPathDirection: "left-right",
         rotationRange: 10 + (i % 3) * 3,
         pathMotion: i % 2 === 0 ? "linear" : "sine",
       })),
@@ -66,7 +65,7 @@ const RepeatingImageTransition = () => {
         ...item,
         image: `/assets/img${(i % TOTAL_IMAGES) + 1}.webp`,
         steps: 6 + (i % 3),
-        clipPathDirection: i % 2 === 0 ? "left-right" : "right-left",
+        clipPathDirection: "right-left",
         rotationRange: 8 + (i % 5),
         pathMotion: i % 2 === 0 ? "sine" : "linear",
       })),
@@ -97,7 +96,7 @@ const RepeatingImageTransition = () => {
         ...item,
         image: `/assets/img${(i % TOTAL_IMAGES) + 1}.webp`,
         steps: 7 + (i % 3),
-        clipPathDirection: i % 2 === 0 ? "top-bottom" : "bottom-top",
+        clipPathDirection: "left-right",
         rotationRange: 10 + (i % 4),
         pathMotion: i % 2 === 0 ? "sine" : "linear",
       })),
@@ -128,7 +127,7 @@ const RepeatingImageTransition = () => {
         ...item,
         image: `/assets/img${(i % TOTAL_IMAGES) + 1}.webp`,
         steps: 5 + (i % 4),
-        clipPathDirection: i % 2 === 0 ? "bottom-top" : "top-bottom",
+        clipPathDirection: "right-left",
         rotationRange: 12 + (i % 5),
         pathMotion: i % 2 === 0 ? "linear" : "sine",
       })),
@@ -140,52 +139,80 @@ const RepeatingImageTransition = () => {
     isAnimatingRef.current = true;
 
     const gridItem = event.currentTarget;
-    const gridItemRect = gridItem.getBoundingClientRect();
+    const rect = gridItem.getBoundingClientRect();
 
     setSelectedItem(item);
 
     const movers = [];
-    const steps = item.steps || 5;
+    const steps = Math.max(4, item.steps || 6);
+
+    let moveLeftToRight = true;
+
+    if (item.id >= 1 && item.id <= 16) {
+      moveLeftToRight = true;
+    } else if (item.id >= 100 && item.id <= 116) {
+      moveLeftToRight = false;
+    } else if (item.id >= 200 && item.id <= 216) {
+      moveLeftToRight = true;
+    } else if (item.id >= 300 && item.id <= 316) {
+      moveLeftToRight = false;
+    }
+
+    let startX, endX;
+
+    if (moveLeftToRight) {
+      startX = window.innerWidth * -0.3;
+      endX = window.innerWidth * 0.3;
+    } else {
+      startX = window.innerWidth * 1.3;
+      endX = window.innerWidth * 0.7;
+    }
+
+    const startY = rect.top + rect.height / 2;
+
+    const endY = window.innerHeight * 0.5;
+
+    const panelSideClass = moveLeftToRight ? "flex-row" : "flex-row-reverse";
+    if (panelRef.current) {
+      panelRef.current.classList.remove("flex-row", "flex-row-reverse");
+      panelRef.current.classList.add(panelSideClass);
+    }
 
     for (let i = 0; i < steps; i++) {
       const mover = document.createElement("div");
       mover.className = "mover";
 
-      const transitionWidth = gridItemRect.width * 2.2;
-      const transitionHeight = gridItemRect.height * 2.2;
-      const centerX = gridItemRect.left + gridItemRect.width / 2;
-      const centerY = gridItemRect.top + gridItemRect.height / 2;
+      const tw = Math.round(rect.width * 2.2);
+      const th = Math.round(rect.height * 2.2);
+
+      const left = startX - tw / 2;
+      const top = startY - th / 2;
 
       mover.style.cssText = `
-    position: fixed;
-    width: ${transitionWidth}px;
-    height: ${transitionHeight}px;
-    left: ${centerX - transitionWidth / 2}px;
-    top: ${centerY - transitionHeight / 2}px;
-    background-image: url(${item.image});
-    background-size: cover;
-    background-position: center;
-    pointer-events: none;
-    z-index: ${100 + i};
-    opacity: 0;
-    will-change: transform, opacity;
-  `;
+        position: fixed;
+        left: ${left}px;
+        top: ${top}px;
+        width: ${tw}px;
+        height: ${th}px;
+        background-image: url(${item.image});
+        background-size: cover;
+        background-position: center center;
+        pointer-events: none;
+        z-index: ${120 + i};
+        opacity: 0;
+        transform-origin: center;
+        will-change: transform, opacity;
+      `;
 
       document.body.appendChild(mover);
-
       movers.push(mover);
     }
-
-    const startX = gridItemRect.left + gridItemRect.width / 2;
-    const startY = gridItemRect.top + gridItemRect.height / 2;
-    const endX = window.innerWidth * 0.35;
-    const endY = window.innerHeight / 2;
 
     const otherItems = document.querySelectorAll(".grid-item");
     otherItems.forEach((el) => {
       if (el !== gridItem) {
         el.animate([{ opacity: 1 }, { opacity: 0 }], {
-          duration: 600,
+          duration: 400,
           easing: "ease-in-out",
           fill: "forwards",
         });
@@ -195,114 +222,89 @@ const RepeatingImageTransition = () => {
     gridItem.animate(
       [
         { transform: "scale(1)", opacity: 1 },
-        { transform: "scale(0.9)", opacity: 0 },
+        { transform: "scale(0.85)", opacity: 0 },
       ],
       {
-        duration: 800,
+        duration: 550,
         easing: "ease-in-out",
         fill: "forwards",
       }
     );
 
     movers.forEach((mover, i) => {
-      const delay = i * 80;
-      const rotationRange = item.rotationRange || 10;
-      const randomRotation = (Math.random() - 0.5) * rotationRange;
+      const delay = i * 90;
+      const randomXJitter = (Math.random() - 0.5) * 30;
+      const randomYJitter = (Math.random() - 0.5) * 25;
 
-      let pathX = endX - startX;
-      let pathY = endY - startY;
+      const dx = endX - startX + randomXJitter;
+      const dy = endY - startY + randomYJitter;
 
-      if (item.pathMotion === "sine") {
-        const amplitude = item.sineAmplitude || 50;
-        const frequency = item.sineFrequency || 3.14;
-        const progress = i / (steps - 1);
-        const wobbleX = Math.sin(progress * frequency) * amplitude;
-        const wobbleY = Math.cos(progress * frequency) * amplitude * 0.5;
-        pathX += wobbleX;
-        pathY += wobbleY;
-      } else {
-        const wobble = 20;
-        pathX += (Math.random() - 0.5) * wobble;
-        pathY += (Math.random() - 0.5) * wobble;
-      }
+      const zStart = -350 - Math.random() * 120;
+      const zMid = -60 + Math.random() * 30;
+      const zEnd = 0;
+
+      const rotation = (Math.random() - 0.5) * (item.rotationRange || 12);
 
       setTimeout(() => {
-        mover.animate([{ opacity: 0 }, { opacity: 1 }], {
-          duration: 400,
-          easing: "ease-out",
-          fill: "forwards",
-        });
-
-        setTimeout(() => {
-          mover.animate(
-            [
-              { transform: "translate(0, 0) rotate(0deg) scale(1)" },
-              {
-                transform: `translate(${pathX}px, ${pathY}px) rotate(${randomRotation}deg) scale(1)`,
-              },
-            ],
+        mover.animate(
+          [
             {
-              duration: 1200,
-              easing: "ease-in-out",
-              fill: "forwards",
-            }
-          );
-
-          setTimeout(() => {
-            mover.animate(
-              [
-                {
-                  opacity: 1,
-                  transform: `translate(${pathX}px, ${pathY}px) rotate(${randomRotation}deg) scale(1)`,
-                },
-                {
-                  opacity: 0,
-                  transform: `translate(${pathX}px, ${pathY}px) rotate(${randomRotation}deg) scale(1.1)`,
-                },
-              ],
-              {
-                duration: 500,
-                easing: "ease-in",
-                fill: "forwards",
-              }
-            );
-          }, 1000);
-        }, 100);
+              opacity: 0,
+              transform: `translate3d(0px,0px,${zStart}px) scale(0.9) rotate(0deg)`,
+            },
+            {
+              opacity: 1,
+              transform: `translate3d(${dx * 0.45}px,${
+                dy * 0.45
+              }px,${zMid}px) scale(1.05) rotate(${rotation}deg)`,
+            },
+            {
+              opacity: 1,
+              transform: `translate3d(${dx}px,${dy}px,${zEnd}px) scale(1.12) rotate(${rotation}deg)`,
+            },
+            {
+              opacity: 0,
+              transform: `translate3d(${dx * 1.18}px,${
+                dy * 1.12
+              }px,150px) scale(1.25) rotate(${rotation}deg)`,
+            },
+          ],
+          {
+            duration: 1300 + i * 40,
+            easing: "cubic-bezier(0.65, 0, 0.35, 1)",
+            fill: "forwards",
+          }
+        );
       }, delay);
     });
 
     const clipPaths = {
-      "top-bottom": ["inset(0% 0% 100% 0%)", "inset(0% 0% 0% 0%)"],
-      "bottom-top": ["inset(100% 0% 0% 0%)", "inset(0% 0% 0% 0%)"],
       "left-right": ["inset(0% 100% 0% 0%)", "inset(0% 0% 0% 0%)"],
       "right-left": ["inset(0% 0% 0% 100%)", "inset(0% 0% 0% 0%)"],
     };
 
-    const direction = item.clipPathDirection || "top-bottom";
-    const clipPathValues = clipPaths[direction];
-    const startClip = clipPathValues[0];
-    const endClip = clipPathValues[1];
+    const clipDirection = moveLeftToRight ? "left-right" : "right-left";
 
     setTimeout(() => {
       if (panelRef.current) {
         panelRef.current.animate(
           [
-            { clipPath: startClip, opacity: 1 },
-            { clipPath: endClip, opacity: 1 },
+            { clipPath: clipPaths[clipDirection][0], opacity: 0.6 },
+            { clipPath: clipPaths[clipDirection][1], opacity: 1 },
           ],
           {
-            duration: 1200,
+            duration: 900,
             easing: "cubic-bezier(0.65, 0, 0.35, 1)",
             fill: "forwards",
           }
         );
       }
-    }, 800);
+    }, 700);
 
     setTimeout(() => {
-      movers.forEach((mover) => mover.remove());
+      movers.forEach((m) => m.remove());
       isAnimatingRef.current = false;
-    }, 2500);
+    }, 2600);
   };
 
   const handlePanelClose = () => {
@@ -407,9 +409,7 @@ const RepeatingImageTransition = () => {
       {selectedItem && (
         <div
           ref={panelRef}
-          className={`fixed inset-0 z-50 bg-white flex items-center justify-between ${
-            selectedItem.id % 2 === 0 ? "flex-row-reverse" : "flex-row"
-          }`}
+          className="fixed inset-0 z-50 bg-white flex items-center justify-between"
           style={{ clipPath: "inset(0% 0% 100% 0%)", opacity: 0 }}
         >
           <div className="w-1/2 h-full flex items-center justify-center p-12 overflow-hidden">
@@ -427,13 +427,7 @@ const RepeatingImageTransition = () => {
             </div>
           </div>
 
-          <div
-            className={`w-1/2 h-full flex flex-col justify-end p-12 ${
-              selectedItem.id % 2 === 0
-                ? "items-start text-left"
-                : "items-end text-right"
-            }`}
-          >
+          <div className="w-1/2 h-full flex flex-col justify-end p-12 items-start text-left">
             <div className="mb-8 opacity-100 animate-[fadeUp_1s_ease-out_0.4s_forwards] text-black">
               <h2 className="text-[13px] font-medium tracking-wide lowercase text-black">
                 {selectedItem.title}
